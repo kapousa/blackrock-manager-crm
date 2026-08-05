@@ -2,6 +2,7 @@
 /**
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation and detailed table views.
+ * Author:  Black Rock Real Estate
  * Version: 4.3.1
  */
 
