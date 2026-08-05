@@ -7,6 +7,18 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Initialize Plugin Update Checker from GitHub
+require_once plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update-checker.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$myUpdateChecker = PucFactory::buildUpdateChecker(
+    'https://github.com/kapousa/blackrock-manager-crm/',
+    __FILE__,
+    'blackrock-manager-crm' // your plugin's folder name
+);
+
+$myUpdateChecker->setBranch('master');
+
 // 1. Unified CSV Export Handler
 add_action('template_redirect', 'handle_blackrock_crm_export', 1);
 
