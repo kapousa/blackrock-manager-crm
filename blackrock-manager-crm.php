@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation and detailed table views.
  * Author:  Black Rock Real Estate
- * Version: 4.3.1
+ * Version: 4.4.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -15,7 +15,7 @@ use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 $myUpdateChecker = PucFactory::buildUpdateChecker(
     'https://github.com/kapousa/blackrock-manager-crm/',
     __FILE__,
-    'blackrock-manager-crm' // your plugin's folder name
+    'blackrock-manager-crm'
 );
 
 $myUpdateChecker->setBranch('master');
@@ -285,7 +285,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 4. Inject Sidebar Links
+// 4. Inject Sidebar Links (Leads, Deals, Inquiries, Validator)
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
@@ -302,12 +302,23 @@ function inject_blackrock_crm_links() {
                 }
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
-                ['leads', 'deals', 'inquiries'].forEach(function(type) {
+                var crmItems = [
+                    { type: 'leads', label: 'All Leads' },
+                    { type: 'deals', label: 'All Deals' },
+                    { type: 'inquiries', label: 'All Inquiries' }
+                ];
+                crmItems.forEach(function(item) {
                     var li = document.createElement('li');
-                    li.id = 'br-master-' + type;
-                    li.innerHTML = '<a href="/master-crm/?crm_type='+type+'"><i class="houzez-icon icon-tasks"></i> All '+type.charAt(0).toUpperCase()+type.slice(1)+'</a>';
+                    li.id = 'br-master-' + item.type;
+                    li.innerHTML = '<a href="/master-crm/?crm_type=' + item.type + '"><i class="houzez-icon icon-tasks"></i> ' + item.label + '</a>';
                     crmList.appendChild(li);
                 });
+
+                // Add Validator page link
+                var valLi = document.createElement('li');
+                valLi.id = 'br-master-validator';
+                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="houzez-icon icon-check-circle-1"></i> Feed Validator</a>';
+                crmList.appendChild(valLi);
             }
         }
         setInterval(addLinks, 1000);
