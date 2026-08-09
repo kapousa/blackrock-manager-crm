@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation and detailed table views.
  * Author:  Black Rock Real Estate
- * Version: 4.4.3
+ * Version: 4.4.4
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -285,7 +285,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 4. Inject Sidebar Links (Leads, Deals, Inquiries, Validator) with Houzez-native Icon Classes
+// 4. Inject Sidebar Links with dynamically cloned icon classes
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
@@ -302,11 +302,22 @@ function inject_blackrock_crm_links() {
                 }
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
+                // Grab existing icon classes directly from native Houzez menu items
+                var getIconClass = function(selector) {
+                    var el = crmList.querySelector(selector + ' i');
+                    return el ? el.className : 'houzez-icon icon-single-neutral';
+                };
+
+                var dealsIcon = getIconClass('a[href*="deals"]');
+                var leadsIcon = getIconClass('a[href*="leads"]');
+                var inqIcon   = getIconClass('a[href*="inquiries"]');
+
                 var crmItems = [
-                    { type: 'leads', label: 'All Leads', icon: 'houzez-icon icon-single-neutral' },
-                    { type: 'deals', label: 'All Deals', icon: 'houzez-icon icon-briefcase' },
-                    { type: 'inquiries', label: 'All Inquiries', icon: 'houzez-icon icon-messages-bubble' }
+                    { type: 'leads', label: 'All Leads', icon: leadsIcon },
+                    { type: 'deals', label: 'All Deals', icon: dealsIcon },
+                    { type: 'inquiries', label: 'All Inquiries', icon: inqIcon }
                 ];
+
                 crmItems.forEach(function(item) {
                     var li = document.createElement('li');
                     li.id = 'br-master-' + item.type;
@@ -314,10 +325,9 @@ function inject_blackrock_crm_links() {
                     crmList.appendChild(li);
                 });
 
-                // Add Validator page link using Houzez checklist icon
                 var valLi = document.createElement('li');
                 valLi.id = 'br-master-validator';
-                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="houzez-icon icon-check-circle-1 mr-2"></i> Feed Validator</a>';
+                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="' + leadsIcon + ' mr-2"></i> Feed Validator</a>';
                 crmList.appendChild(valLi);
             }
         }
