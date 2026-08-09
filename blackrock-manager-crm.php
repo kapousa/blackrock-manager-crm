@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation and detailed table views.
  * Author:  Black Rock Real Estate
- * Version: 4.4.0
+ * Version: 4.4.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -285,7 +285,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 4. Inject Sidebar Links (Leads, Deals, Inquiries, Validator)
+// 4. Inject Sidebar Links (Leads, Deals, Inquiries, Validator) with native Font Awesome Icons
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
@@ -303,21 +303,21 @@ function inject_blackrock_crm_links() {
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
                 var crmItems = [
-                    { type: 'leads', label: 'All Leads' },
-                    { type: 'deals', label: 'All Deals' },
-                    { type: 'inquiries', label: 'All Inquiries' }
+                    { type: 'leads', label: 'All Leads', icon: 'fa fa-user' },
+                    { type: 'deals', label: 'All Deals', icon: 'fa fa-briefcase' },
+                    { type: 'inquiries', label: 'All Inquiries', icon: 'fa fa-envelope' }
                 ];
                 crmItems.forEach(function(item) {
                     var li = document.createElement('li');
                     li.id = 'br-master-' + item.type;
-                    li.innerHTML = '<a href="/master-crm/?crm_type=' + item.type + '"><i class="houzez-icon icon-tasks"></i> ' + item.label + '</a>';
+                    li.innerHTML = '<a href="/master-crm/?crm_type=' + item.type + '"><i class="' + item.icon + ' mr-2"></i> ' + item.label + '</a>';
                     crmList.appendChild(li);
                 });
 
-                // Add Validator page link
+                // Add Validator page link with Font Awesome check icon
                 var valLi = document.createElement('li');
                 valLi.id = 'br-master-validator';
-                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="houzez-icon icon-check-circle-1"></i> Feed Validator</a>';
+                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="fa fa-check-circle mr-2"></i> Feed Validator</a>';
                 crmList.appendChild(valLi);
             }
         }
