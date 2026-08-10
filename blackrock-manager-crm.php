@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, and quick agent assignment.
  * Author:  Black Rock Real Estate
- * Version: 4.5.2
+ * Version: 4.5.3
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -416,11 +416,21 @@ function inject_blackrock_crm_links() {
                 }
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
+                // Find existing icon classes directly from native Houzez links
+                var dealsLink = crmList.querySelector('a[href*="deals"] i, a[href*="deal"] i');
+                var leadsLink = crmList.querySelector('a[href*="leads"] i, a[href*="lead"] i');
+                var inqLink   = crmList.querySelector('a[href*="inquiries"] i, a[href*="enquiries"] i');
+
+                var dealsIcon = dealsLink ? dealsLink.className : 'houzez-icon icon-briefcase';
+                var leadsIcon = leadsLink ? leadsLink.className : 'houzez-icon icon-single-neutral';
+                var inqIcon   = inqLink   ? inqLink.className   : 'houzez-icon icon-messages-bubble';
+
                 var crmItems = [
-                    { type: 'leads', label: 'All Leads', icon: 'houzez-icon icon-single-neutral' },
-                    { type: 'deals', label: 'All Deals', icon: 'houzez-icon icon-hand-held-tablet-check' },
-                    { type: 'inquiries', label: 'All Inquiries', icon: 'houzez-icon icon-messages-bubble' }
+                    { type: 'leads', label: 'All Leads', icon: leadsIcon },
+                    { type: 'deals', label: 'All Deals', icon: dealsIcon },
+                    { type: 'inquiries', label: 'All Inquiries', icon: inqIcon }
                 ];
+
                 crmItems.forEach(function(item) {
                     var li = document.createElement('li');
                     li.id = 'br-master-' + item.type;
