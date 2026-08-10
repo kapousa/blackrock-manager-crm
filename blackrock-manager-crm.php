@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Black Rock - CRM Manager Override
- * Description: Master CRM pipelines with Dashboard navigation and detailed table views.
+ * Description: Master CRM pipelines with Dashboard navigation, detailed table views, and quick agent assignment.
  * Author:  Black Rock Real Estate
- * Version: 4.4.4
+ * Version: 4.5.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -17,19 +17,40 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
     __FILE__,
     'blackrock-manager-crm'
 );
-
 $myUpdateChecker->setBranch('master');
 
-// 1. Unified CSV Export Handler
-add_action('template_redirect', 'handle_blackrock_crm_export', 1);
+// 1. AJAX Handler for Quick Lead Assignment
+add_action('wp_ajax_br_assign_lead_agent', 'br_assign_lead_agent_callback');
+function br_assign_lead_agent_callback() {
+    if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) {
+        wp_send_json_error('Unauthorized permissions');
+    }
 
-function inject_houzez_sidebar_css() {
-    if (is_page('master-crm')) {
-        echo '<style>
-            .user-dashboard-right { width: 75% !important; float: right; }
-        </style>';
+    $lead_id  = isset($_POST['lead_id']) ? intval($_POST['lead_id']) : 0;
+    $agent_id = isset($_POST['agent_id']) ? intval($_POST['agent_id']) : 0;
+
+    if (!$lead_id) {
+        wp_send_json_error('Invalid Lead ID');
+    }
+
+    global $wpdb;
+    $updated = $wpdb->update(
+        "{$wpdb->prefix}houzez_crm_leads",
+        array('user_id' => $agent_id),
+        array('lead_id' => $lead_id),
+        array('%d'),
+        array('%d')
+    );
+
+    if ($updated !== false) {
+        wp_send_json_success('Agent updated successfully');
+    } else {
+        wp_send_json_error('Failed to update agent assignment');
     }
 }
+
+// 2. Unified CSV Export Handler
+add_action('template_redirect', 'handle_blackrock_crm_export', 1);
 
 function handle_blackrock_crm_export() {
     $action = isset($_GET['action']) ? $_GET['action'] : '';
@@ -123,13 +144,20 @@ function handle_blackrock_crm_export() {
     }
 }
 
-// 2. Render Master CRM Board (With Detailed Information)
+// 3. Render Master CRM Board with Agent Dropdown Selector
 function render_master_crm_board($type) {
     global $wpdb;
     $export_url = add_query_arg(['action' => 'export_blackrock_'.$type], home_url('/'));
 
+    // Fetch agents for the dropdown assignment menu
+    $agents = get_users(array(
+        'role__in' => array('houzez_agent', 'administrator', 'editor', 'author', 'houzez_manager'),
+        'orderby'  => 'display_name',
+        'order'    => 'ASC'
+    ));
+
     ob_start(); ?>
-    <div class="user-dashboard-right">
+    <div class="user-dashboard-right" style="width: 75% !important; float: right;">
         <div class="dashboard-content-area">
             <div class="dashboard-area">
                 <div class="dashboard-header clearfix" style="margin-bottom: 30px;">
@@ -137,7 +165,6 @@ function render_master_crm_board($type) {
                         <h2 class="title">Master <?php echo ucfirst($type); ?> Board</h2>
                     </div>
                     <div class="float-right">
-                        <!-- Navigation Buttons -->
                         <a href="/user-dashboard-2/" class="btn btn-primary" style="margin-right: 10px;">Back To Dashboard</a>
                         <a href="<?php echo esc_url($export_url); ?>" class="btn btn-success">Export CSV</a>
                     </div>
@@ -167,6 +194,7 @@ function render_master_crm_board($type) {
                                 <?php if (!empty($data)) : foreach ($data as $item):
                                     $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
                                     if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
+                                    $assigned_user_id = intval($item->user_id ?? 0);
                                 ?>
                                 <tr>
                                     <td><strong><?php echo esc_html($name); ?></strong></td>
@@ -177,7 +205,17 @@ function render_master_crm_board($type) {
                                     <td><span class="badge badge-info"><?php echo esc_html(ucfirst($item->type ?? 'General')); ?></span></td>
                                     <td><?php echo esc_html($item->source ?? ($item->source_link ?? 'Direct')); ?></td>
                                     <td><span class="badge badge-secondary"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
-                                    <td><?php echo esc_html($item->agent_name ?? 'Unassigned'); ?></td>
+                                    <td>
+                                        <!-- Inline Dropdown to Reassign Lead -->
+                                        <select class="form-control br-agent-assign-select" data-lead-id="<?php echo esc_attr($item->lead_id); ?>" style="min-width: 150px; font-size: 13px;">
+                                            <option value="0" <?php selected($assigned_user_id, 0); ?>>-- Unassigned --</option>
+                                            <?php foreach ($agents as $agent): ?>
+                                                <option value="<?php echo esc_attr($agent->ID); ?>" <?php selected($assigned_user_id, $agent->ID); ?>>
+                                                    <?php echo esc_html($agent->display_name); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </td>
                                     <td><?php echo esc_html($item->time ?? 'N/A'); ?></td>
                                 </tr>
                                 <?php endforeach; else : ?>
@@ -274,10 +312,50 @@ function render_master_crm_board($type) {
             </div>
         </div>
     </div>
+
+    <!-- Script to execute lead update AJAX -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+        var selects = document.querySelectorAll('.br-agent-assign-select');
+
+        selects.forEach(function(select) {
+            select.addEventListener('change', function() {
+                var leadId  = this.getAttribute('data-lead-id');
+                var agentId = this.value;
+                var selectElem = this;
+
+                selectElem.style.borderColor = '#ffc107';
+
+                var formData = new FormData();
+                formData.append('action', 'br_assign_lead_agent');
+                formData.append('lead_id', leadId);
+                formData.append('agent_id', agentId);
+
+                fetch(ajaxurl, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        selectElem.style.borderColor = '#28a745';
+                    } else {
+                        selectElem.style.borderColor = '#dc3545';
+                        alert('Error updating agent assignment');
+                    }
+                })
+                .catch(function() {
+                    selectElem.style.borderColor = '#dc3545';
+                });
+            });
+        });
+    });
+    </script>
     <?php return ob_get_clean();
 }
 
-// 3. Register Shortcode
+// 4. Register Shortcode
 add_shortcode('blackrock_crm_board', 'render_blackrock_crm_shortcode');
 function render_blackrock_crm_shortcode($atts) {
     $type = isset($_GET['crm_type']) ? sanitize_text_field($_GET['crm_type']) : 'leads';
@@ -285,7 +363,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 4. Inject Sidebar Links with dynamically cloned icon classes
+// 5. Inject Sidebar Links
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
@@ -302,22 +380,11 @@ function inject_blackrock_crm_links() {
                 }
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
-                // Grab existing icon classes directly from native Houzez menu items
-                var getIconClass = function(selector) {
-                    var el = crmList.querySelector(selector + ' i');
-                    return el ? el.className : 'houzez-icon icon-single-neutral';
-                };
-
-                var dealsIcon = getIconClass('a[href*="deals"]');
-                var leadsIcon = getIconClass('a[href*="leads"]');
-                var inqIcon   = getIconClass('a[href*="inquiries"]');
-
                 var crmItems = [
-                    { type: 'leads', label: 'All Leads', icon: leadsIcon },
-                    { type: 'deals', label: 'All Deals', icon: dealsIcon },
-                    { type: 'inquiries', label: 'All Inquiries', icon: inqIcon }
+                    { type: 'leads', label: 'All Leads', icon: 'houzez-icon icon-single-neutral' },
+                    { type: 'deals', label: 'All Deals', icon: 'houzez-icon icon-briefcase' },
+                    { type: 'inquiries', label: 'All Inquiries', icon: 'houzez-icon icon-messages-bubble' }
                 ];
-
                 crmItems.forEach(function(item) {
                     var li = document.createElement('li');
                     li.id = 'br-master-' + item.type;
@@ -327,7 +394,7 @@ function inject_blackrock_crm_links() {
 
                 var valLi = document.createElement('li');
                 valLi.id = 'br-master-validator';
-                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="' + leadsIcon + ' mr-2"></i> Feed Validator</a>';
+                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="houzez-icon icon-check-circle-1 mr-2"></i> Feed Validator</a>';
                 crmList.appendChild(valLi);
             }
         }
