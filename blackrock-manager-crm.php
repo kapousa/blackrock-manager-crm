@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Black Rock - CRM Manager Override
- * Description: Master CRM pipelines with Dashboard navigation, detailed table views, and quick agent assignment.
+ * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, and quick agent assignment.
  * Author:  Black Rock Real Estate
- * Version: 4.5.0
+ * Version: 4.5.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -19,7 +19,45 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 );
 $myUpdateChecker->setBranch('master');
 
-// 1. AJAX Handler for Quick Lead Assignment
+// 1. Inject Custom CSS for Badges & Table Readability
+add_action('wp_head', 'blackrock_crm_custom_styles');
+function blackrock_crm_custom_styles() {
+    if (is_page('master-crm')) {
+        echo '<style>
+            .user-dashboard-right { width: 75% !important; float: right; }
+            .badge-info {
+                background-color: #17a2b8 !important;
+                color: #ffffff !important;
+                padding: 5px 10px !important;
+                font-size: 12px !important;
+                border-radius: 4px !important;
+                display: inline-block !important;
+            }
+            .badge-secondary {
+                background-color: #6c757d !important;
+                color: #ffffff !important;
+                padding: 5px 10px !important;
+            }
+            .badge-primary {
+                background-color: #007bff !important;
+                color: #ffffff !important;
+                padding: 5px 10px !important;
+            }
+            .badge-warning {
+                background-color: #ffc107 !important;
+                color: #212529 !important;
+                padding: 5px 10px !important;
+            }
+            .badge-success {
+                background-color: #28a745 !important;
+                color: #ffffff !important;
+                padding: 5px 10px !important;
+            }
+        </style>';
+    }
+}
+
+// 2. AJAX Handler for Quick Lead Assignment
 add_action('wp_ajax_br_assign_lead_agent', 'br_assign_lead_agent_callback');
 function br_assign_lead_agent_callback() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) {
@@ -49,7 +87,7 @@ function br_assign_lead_agent_callback() {
     }
 }
 
-// 2. Unified CSV Export Handler
+// 3. Unified CSV Export Handler
 add_action('template_redirect', 'handle_blackrock_crm_export', 1);
 
 function handle_blackrock_crm_export() {
@@ -144,12 +182,11 @@ function handle_blackrock_crm_export() {
     }
 }
 
-// 3. Render Master CRM Board with Agent Dropdown Selector
+// 4. Render Master CRM Board with Agent Dropdown Selector
 function render_master_crm_board($type) {
     global $wpdb;
     $export_url = add_query_arg(['action' => 'export_blackrock_'.$type], home_url('/'));
 
-    // Fetch agents for the dropdown assignment menu
     $agents = get_users(array(
         'role__in' => array('houzez_agent', 'administrator', 'editor', 'author', 'houzez_manager'),
         'orderby'  => 'display_name',
@@ -157,7 +194,7 @@ function render_master_crm_board($type) {
     ));
 
     ob_start(); ?>
-    <div class="user-dashboard-right" style="width: 75% !important; float: right;">
+    <div class="user-dashboard-right">
         <div class="dashboard-content-area">
             <div class="dashboard-area">
                 <div class="dashboard-header clearfix" style="margin-bottom: 30px;">
@@ -195,6 +232,7 @@ function render_master_crm_board($type) {
                                     $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
                                     if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
                                     $assigned_user_id = intval($item->user_id ?? 0);
+                                    $lead_type = !empty($item->type) ? ucfirst($item->type) : 'General';
                                 ?>
                                 <tr>
                                     <td><strong><?php echo esc_html($name); ?></strong></td>
@@ -202,11 +240,10 @@ function render_master_crm_board($type) {
                                         <?php echo esc_html($item->email ?? 'N/A'); ?><br>
                                         <small class="text-muted"><?php echo esc_html($item->mobile ?? 'N/A'); ?></small>
                                     </td>
-                                    <td><span class="badge badge-info"><?php echo esc_html(ucfirst($item->type ?? 'General')); ?></span></td>
+                                    <td><span class="badge badge-info"><?php echo esc_html($lead_type); ?></span></td>
                                     <td><?php echo esc_html($item->source ?? ($item->source_link ?? 'Direct')); ?></td>
                                     <td><span class="badge badge-secondary"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
                                     <td>
-                                        <!-- Inline Dropdown to Reassign Lead -->
                                         <select class="form-control br-agent-assign-select" data-lead-id="<?php echo esc_attr($item->lead_id); ?>" style="min-width: 150px; font-size: 13px;">
                                             <option value="0" <?php selected($assigned_user_id, 0); ?>>-- Unassigned --</option>
                                             <?php foreach ($agents as $agent): ?>
@@ -313,7 +350,6 @@ function render_master_crm_board($type) {
         </div>
     </div>
 
-    <!-- Script to execute lead update AJAX -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
@@ -355,7 +391,7 @@ function render_master_crm_board($type) {
     <?php return ob_get_clean();
 }
 
-// 4. Register Shortcode
+// 5. Register Shortcode
 add_shortcode('blackrock_crm_board', 'render_blackrock_crm_shortcode');
 function render_blackrock_crm_shortcode($atts) {
     $type = isset($_GET['crm_type']) ? sanitize_text_field($_GET['crm_type']) : 'leads';
@@ -363,7 +399,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 5. Inject Sidebar Links
+// 6. Inject Sidebar Links
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
