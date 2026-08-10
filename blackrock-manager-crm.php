@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, and quick agent assignment.
  * Author:  Black Rock Real Estate
- * Version: 4.5.3
+ * Version: 4.6.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -19,16 +19,47 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 );
 $myUpdateChecker->setBranch('master');
 
-// 1. Inject Custom CSS for Badges & Table Readability
+// 1. Inject Custom CSS for Full Width & Clean Table Styling
 add_action('wp_head', 'blackrock_crm_custom_styles');
 function blackrock_crm_custom_styles() {
-    if (is_page('master-crm')) {
+    if (is_page('master-crm') || (isset($_GET['crm_type']))) {
         echo '<style>
-            .user-dashboard-right { width: 75% !important; float: right; }
+            .user-dashboard-right, .dashboard-content-area, .dashboard-area {
+                width: 100% !important;
+                max-width: 100% !important;
+                float: none !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            .table-responsive {
+                width: 100% !important;
+                overflow-x: auto;
+            }
+            .table {
+                width: 100% !important;
+                margin-bottom: 1rem;
+                color: #212529;
+                border-collapse: collapse;
+            }
+            .table thead th {
+                background-color: #2c3e50 !important;
+                color: #ffffff !important;
+                border-color: #34495e !important;
+                padding: 12px 15px !important;
+                font-weight: 600 !important;
+                font-size: 14px !important;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .table tbody td {
+                padding: 12px 15px !important;
+                vertical-align: middle !important;
+                border-top: 1px solid #dee2e6 !important;
+            }
             .badge-info {
                 background-color: #17a2b8 !important;
                 color: #ffffff !important;
-                padding: 5px 10px !important;
+                padding: 6px 12px !important;
                 font-size: 12px !important;
                 border-radius: 4px !important;
                 display: inline-block !important;
@@ -36,22 +67,22 @@ function blackrock_crm_custom_styles() {
             .badge-secondary {
                 background-color: #6c757d !important;
                 color: #ffffff !important;
-                padding: 5px 10px !important;
+                padding: 6px 12px !important;
             }
             .badge-primary {
                 background-color: #007bff !important;
                 color: #ffffff !important;
-                padding: 5px 10px !important;
+                padding: 6px 12px !important;
             }
             .badge-warning {
                 background-color: #ffc107 !important;
                 color: #212529 !important;
-                padding: 5px 10px !important;
+                padding: 6px 12px !important;
             }
             .badge-success {
                 background-color: #28a745 !important;
                 color: #ffffff !important;
-                padding: 5px 10px !important;
+                padding: 6px 12px !important;
             }
         </style>';
     }
@@ -399,7 +430,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 6. Inject Sidebar Links
+// 6. Inject Sidebar Links dynamically copying Houzez menu icons
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
@@ -416,7 +447,6 @@ function inject_blackrock_crm_links() {
                 }
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
-                // Find existing icon classes directly from native Houzez links
                 var dealsLink = crmList.querySelector('a[href*="deals"] i, a[href*="deal"] i');
                 var leadsLink = crmList.querySelector('a[href*="leads"] i, a[href*="lead"] i');
                 var inqLink   = crmList.querySelector('a[href*="inquiries"] i, a[href*="enquiries"] i');
