@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, and quick agent assignment.
  * Author: Black Rock Real Estate
- * Version: 4.9.4
+ * Version: 4.9.5
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -18,6 +18,11 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
     'blackrock-manager-crm'
 );
 $myUpdateChecker->setBranch('master');
+
+// Authenticate via wp-config constant to keep credentials out of Git
+if (defined('BLACKROCK_GITHUB_TOKEN')) {
+    $myUpdateChecker->setAuthentication(BLACKROCK_GITHUB_TOKEN);
+}
 
 // 1. Inject Custom CSS for Dashboard Table Views
 add_action('wp_head', 'blackrock_crm_custom_styles');
