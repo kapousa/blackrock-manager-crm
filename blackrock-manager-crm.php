@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, quick agent assignment, and native Houzez dashboard template integration.
  * Author: Black Rock Real Estate
- * Version: 4.8.0
+ * Version: 4.9.0
  */
 
 if (!defined('ABSPATH')) exit;
@@ -19,28 +19,17 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 );
 $myUpdateChecker->setBranch('master');
 
-// 1. Register Query Vars for Houzez Dashboard Routing
-add_filter('query_vars', 'br_register_dashboard_query_vars');
-function br_register_dashboard_query_vars($vars) {
-    $vars[] = 'br_crm_page';
-    return $vars;
-}
-
-// 2. Add Rewrite Rules for Dashboard Native Pages
-add_action('init', 'br_dashboard_rewrite_rules');
-function br_dashboard_rewrite_rules() {
-    add_rewrite_rule('^master-crm/?$', 'index.php?houzez_dashboard=1&br_crm_page=master-crm', 'top');
-    add_rewrite_rule('^bayut-audit-portal/?$', 'index.php?houzez_dashboard=1&br_crm_page=bayut-audit-portal', 'top');
-}
-
-// 3. Render Custom Pages inside Native Houzez Dashboard Content Area
-add_action('houzez_dashboard_content', 'br_render_inside_houzez_dashboard');
+// 1. Hook Content Directly into Houzez Dashboard Content Area
+add_action('houzez_dashboard_content', 'br_render_inside_houzez_dashboard', 5);
 function br_render_inside_houzez_dashboard() {
-    $crm_page = get_query_var('br_crm_page');
+    $br_view = isset($_GET['br_view']) ? sanitize_text_field($_GET['br_view']) : '';
 
-    if ($crm_page === 'master-crm') {
+    if ($br_view === 'master-crm') {
+        // Clear default dashboard template content output
+        ob_clean();
         echo render_blackrock_crm_shortcode(array());
-    } elseif ($crm_page === 'bayut-audit-portal') {
+    } elseif ($br_view === 'bayut-audit-portal') {
+        ob_clean();
         if (shortcode_exists('bayut_audit_portal')) {
             echo do_shortcode('[bayut_audit_portal]');
         } else {
@@ -49,7 +38,7 @@ function br_render_inside_houzez_dashboard() {
     }
 }
 
-// 4. Custom CSS for Table Views
+// 2. Custom CSS for Table Views
 add_action('wp_head', 'blackrock_crm_custom_styles');
 function blackrock_crm_custom_styles() {
     echo '<style>
@@ -65,7 +54,7 @@ function blackrock_crm_custom_styles() {
     </style>';
 }
 
-// 5. AJAX Handler for Quick Lead Assignment
+// 3. AJAX Handler for Quick Lead Assignment
 add_action('wp_ajax_br_assign_lead_agent', 'br_assign_lead_agent_callback');
 function br_assign_lead_agent_callback() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) {
@@ -95,7 +84,7 @@ function br_assign_lead_agent_callback() {
     }
 }
 
-// 6. Unified CSV Export Handler
+// 4. Unified CSV Export Handler
 add_action('template_redirect', 'handle_blackrock_crm_export', 1);
 function handle_blackrock_crm_export() {
     $action = isset($_GET['action']) ? $_GET['action'] : '';
@@ -189,7 +178,7 @@ function handle_blackrock_crm_export() {
     }
 }
 
-// 7. Master CRM Board
+// 5. Master CRM Board Renderer
 function render_master_crm_board($type) {
     global $wpdb;
     $export_url = add_query_arg(['action' => 'export_blackrock_'.$type], home_url('/'));
@@ -390,7 +379,7 @@ function render_master_crm_board($type) {
     <?php return ob_get_clean();
 }
 
-// 8. Register Shortcode
+// 6. Register Shortcode
 add_shortcode('blackrock_crm_board', 'render_blackrock_crm_shortcode');
 function render_blackrock_crm_shortcode($atts) {
     $type = isset($_GET['crm_type']) ? sanitize_text_field($_GET['crm_type']) : 'leads';
@@ -398,7 +387,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 9. Inject Sidebar Links
+// 7. Inject Correct Links into Dashboard Sidebar
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
@@ -415,11 +404,12 @@ function inject_blackrock_crm_links() {
                 }
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
+                var baseUrl = '/my-properties/';
                 var crmItems = [
-                    { id: 'br-master-leads', url: '/master-crm/?crm_type=leads', label: 'All Leads', icon: 'houzez-icon icon-single-neutral' },
-                    { id: 'br-master-deals', url: '/master-crm/?crm_type=deals', label: 'All Deals', icon: 'houzez-icon icon-briefcase' },
-                    { id: 'br-master-inquiries', url: '/master-crm/?crm_type=inquiries', label: 'All Inquiries', icon: 'houzez-icon icon-messages-bubble' },
-                    { id: 'br-master-validator', url: '/bayut-audit-portal/', label: 'Feed Validator', icon: 'houzez-icon icon-check-circle-1' }
+                    { id: 'br-master-leads', url: baseUrl + '?br_view=master-crm&crm_type=leads', label: 'All Leads', icon: 'houzez-icon icon-single-neutral' },
+                    { id: 'br-master-deals', url: baseUrl + '?br_view=master-crm&crm_type=deals', label: 'All Deals', icon: 'houzez-icon icon-briefcase' },
+                    { id: 'br-master-inquiries', url: baseUrl + '?br_view=master-crm&crm_type=inquiries', label: 'All Inquiries', icon: 'houzez-icon icon-messages-bubble' },
+                    { id: 'br-master-validator', url: baseUrl + '?br_view=bayut-audit-portal', label: 'Feed Validator', icon: 'houzez-icon icon-check-circle-1' }
                 ];
 
                 crmItems.forEach(function(item) {
