@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, quick agent assignment, and native Houzez dashboard template integration.
  * Author: Black Rock Real Estate
- * Version: 4.9.1
+ * Version: 4.9.2
  */
 
 if (!defined('ABSPATH')) exit;
@@ -19,65 +19,55 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 );
 $myUpdateChecker->setBranch('master');
 
-// 1. Intercept Dashboard Page Load for Custom Views
-add_action('template_redirect', 'br_crm_catch_dashboard_views', 1);
-function br_crm_catch_dashboard_views() {
+// 1. Force Root Houzez Dashboard Template Wrapper when br_view parameter exists
+add_filter('template_include', 'br_crm_override_dashboard_template', 999);
+function br_crm_override_dashboard_template($template) {
     if (isset($_GET['br_view']) && !empty($_GET['br_view'])) {
-        add_filter('template_include', 'br_crm_load_custom_dashboard_template', 99);
-    }
-}
-
-function br_crm_load_custom_dashboard_template($template) {
-    // Force Houzez generic dashboard layout wrapper
-    $houzez_template = locate_template('user-dashboard.php');
-    if (!empty($houzez_template)) {
-        return $houzez_template;
+        $user_dashboard = locate_template('user-dashboard.php');
+        if (!empty($user_dashboard)) {
+            return $user_dashboard;
+        }
     }
     return $template;
 }
 
-// 2. Render Custom Content directly in main area
-add_action('houzez_dashboard_content', 'br_render_inside_houzez_dashboard', 5);
-add_action('wp_dashboard_content', 'br_render_inside_houzez_dashboard', 5);
-function br_render_inside_houzez_dashboard() {
-    $br_view = isset($_GET['br_view']) ? sanitize_text_field($_GET['br_view']) : '';
+// 2. Render Custom Content into the Dashboard Area
+add_filter('the_content', 'br_crm_inject_custom_view_content', 999);
+add_action('houzez_dashboard_content', 'br_crm_render_view_action', 5);
 
-    if ($br_view === 'master-crm') {
-        echo render_blackrock_crm_shortcode(array());
-    } elseif ($br_view === 'bayut-audit-portal') {
-        if (shortcode_exists('bayut_audit_portal')) {
-            echo do_shortcode('[bayut_audit_portal]');
-        } else {
-            echo '<div class="alert alert-warning">Bayut Validator plugin is not active.</div>';
-        }
+function br_crm_render_view_action() {
+    if (isset($_GET['br_view']) && !empty($_GET['br_view'])) {
+        echo br_crm_get_view_output();
     }
 }
 
-// Fallback: If theme template doesn't trigger houzez_dashboard_content, inject via the_content
-add_filter('the_content', 'br_crm_override_page_content', 999);
-function br_crm_override_page_content($content) {
+function br_crm_inject_custom_view_content($content) {
     if (isset($_GET['br_view']) && !empty($_GET['br_view'])) {
-        $br_view = sanitize_text_field($_GET['br_view']);
-        if ($br_view === 'master-crm') {
-            return render_blackrock_crm_shortcode(array());
-        } elseif ($br_view === 'bayut-audit-portal') {
-            if (shortcode_exists('bayut_audit_portal')) {
-                return do_shortcode('[bayut_audit_portal]');
-            }
-            return '<div class="alert alert-warning">Bayut Validator plugin is not active.</div>';
-        }
+        return br_crm_get_view_output();
     }
     return $content;
 }
 
-// 3. Custom CSS for Table Views & Hiding Default Template Elements when View is Active
+function br_crm_get_view_output() {
+    $br_view = sanitize_text_field($_GET['br_view']);
+    if ($br_view === 'master-crm') {
+        return render_blackrock_crm_shortcode(array());
+    } elseif ($br_view === 'bayut-audit-portal') {
+        if (shortcode_exists('bayut_audit_portal')) {
+            return do_shortcode('[bayut_audit_portal]');
+        }
+        return '<div class="alert alert-warning" style="margin:20px;">Bayut Validator plugin is not active.</div>';
+    }
+    return '';
+}
+
+// 3. CSS for CRM Tables and Hiding Residual Default Content
 add_action('wp_head', 'blackrock_crm_custom_styles');
 function blackrock_crm_custom_styles() {
     if (isset($_GET['br_view']) && !empty($_GET['br_view'])) {
         echo '<style>
-            /* Hide default property/dashboard list items when custom CRM view is active */
             .my-property-search, .property-management-list, .dashboard-property-list,
-            .board-header, .dashboard-listing-table, .pagination { display: none !important; }
+            .board-header, .dashboard-listing-table, .pagination, #houzez-properties-crm { display: none !important; }
         </style>';
     }
     echo '<style>
@@ -123,7 +113,7 @@ function br_assign_lead_agent_callback() {
     }
 }
 
-// 5. Unified CSV Export Handler
+// 5. CSV Export Handler
 add_action('template_redirect', 'handle_blackrock_crm_export', 1);
 function handle_blackrock_crm_export() {
     $action = isset($_GET['action']) ? $_GET['action'] : '';
@@ -143,7 +133,7 @@ function handle_blackrock_crm_export() {
             $query = "SELECT e.*, l.first_name, l.last_name, l.email as lead_email, l.mobile as lead_mobile, p.post_title
                       FROM {$wpdb->prefix}houzez_crm_enquiries e
                       LEFT JOIN {$wpdb->prefix}houzez_crm_leads l ON e.lead_id = l.lead_id
-                      LEFT JOIN {$wpdb->prefix}posts p ON e.listing_id = p.ID
+                      LEFT JOIN {$wpdb->posts} p ON e.listing_id = p.ID
                       ORDER BY e.enquiry_id DESC";
             $results = $wpdb->get_results($query);
             foreach ($results as $r) {
@@ -426,7 +416,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 8. Inject Correct Links into Dashboard Sidebar
+// 8. Inject Sidebar Links dynamically
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
