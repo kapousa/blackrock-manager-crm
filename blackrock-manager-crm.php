@@ -1,12 +1,12 @@
 <?php
 /**
  * Plugin Name: Black Rock - CRM Manager Override
- * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, and quick agent assignment.
+ * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, quick agent assignment, and native Houzez dashboard template integration.
  * Author: Black Rock Real Estate
- * Version: 4.7.0
+ * Version: 4.8.0
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if (!defined('ABSPATH')) exit;
 
 // Initialize Plugin Update Checker from GitHub
 require_once plugin_dir_path(__FILE__) . 'plugin-update-checker/plugin-update-checker.php';
@@ -19,67 +19,53 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 );
 $myUpdateChecker->setBranch('master');
 
-// 1. Inject Custom CSS for Dashboard Table Views
+// 1. Register Query Vars for Houzez Dashboard Routing
+add_filter('query_vars', 'br_register_dashboard_query_vars');
+function br_register_dashboard_query_vars($vars) {
+    $vars[] = 'br_crm_page';
+    return $vars;
+}
+
+// 2. Add Rewrite Rules for Dashboard Native Pages
+add_action('init', 'br_dashboard_rewrite_rules');
+function br_dashboard_rewrite_rules() {
+    add_rewrite_rule('^master-crm/?$', 'index.php?houzez_dashboard=1&br_crm_page=master-crm', 'top');
+    add_rewrite_rule('^bayut-audit-portal/?$', 'index.php?houzez_dashboard=1&br_crm_page=bayut-audit-portal', 'top');
+}
+
+// 3. Render Custom Pages inside Native Houzez Dashboard Content Area
+add_action('houzez_dashboard_content', 'br_render_inside_houzez_dashboard');
+function br_render_inside_houzez_dashboard() {
+    $crm_page = get_query_var('br_crm_page');
+
+    if ($crm_page === 'master-crm') {
+        echo render_blackrock_crm_shortcode(array());
+    } elseif ($crm_page === 'bayut-audit-portal') {
+        if (shortcode_exists('bayut_audit_portal')) {
+            echo do_shortcode('[bayut_audit_portal]');
+        } else {
+            echo '<div class="alert alert-warning">Bayut Validator plugin is not active.</div>';
+        }
+    }
+}
+
+// 4. Custom CSS for Table Views
 add_action('wp_head', 'blackrock_crm_custom_styles');
 function blackrock_crm_custom_styles() {
     echo '<style>
-        .table-responsive {
-            width: 100% !important;
-            overflow-x: auto;
-        }
-        .table {
-            width: 100% !important;
-            margin-bottom: 1rem;
-            color: #212529;
-            border-collapse: collapse;
-        }
-        .table thead th {
-            background-color: #2c3e50 !important;
-            color: #ffffff !important;
-            border-color: #34495e !important;
-            padding: 12px 15px !important;
-            font-weight: 600 !important;
-            font-size: 14px !important;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .table tbody td {
-            padding: 12px 15px !important;
-            vertical-align: middle !important;
-            border-top: 1px solid #dee2e6 !important;
-        }
-        .badge-info {
-            background-color: #17a2b8 !important;
-            color: #ffffff !important;
-            padding: 6px 12px !important;
-            font-size: 12px !important;
-            border-radius: 4px !important;
-            display: inline-block !important;
-        }
-        .badge-secondary {
-            background-color: #6c757d !important;
-            color: #ffffff !important;
-            padding: 6px 12px !important;
-        }
-        .badge-primary {
-            background-color: #007bff !important;
-            color: #ffffff !important;
-            padding: 6px 12px !important;
-        }
-        .badge-warning {
-            background-color: #ffc107 !important;
-            color: #212529 !important;
-            padding: 6px 12px !important;
-        }
-        .badge-success {
-            background-color: #28a745 !important;
-            color: #ffffff !important;
-            padding: 6px 12px !important;
-        }
+        .table-responsive { width: 100% !important; overflow-x: auto; }
+        .table { width: 100% !important; margin-bottom: 1rem; color: #212529; border-collapse: collapse; }
+        .table thead th { background-color: #2c3e50 !important; color: #ffffff !important; border-color: #34495e !important; padding: 12px 15px !important; font-weight: 600 !important; font-size: 14px !important; text-transform: uppercase; letter-spacing: 0.5px; }
+        .table tbody td { padding: 12px 15px !important; vertical-align: middle !important; border-top: 1px solid #dee2e6 !important; }
+        .badge-info { background-color: #17a2b8 !important; color: #ffffff !important; padding: 6px 12px !important; font-size: 12px !important; border-radius: 4px !important; display: inline-block !important; }
+        .badge-secondary { background-color: #6c757d !important; color: #ffffff !important; padding: 6px 12px !important; }
+        .badge-primary { background-color: #007bff !important; color: #ffffff !important; padding: 6px 12px !important; }
+        .badge-warning { background-color: #ffc107 !important; color: #212529 !important; padding: 6px 12px !important; }
+        .badge-success { background-color: #28a745 !important; color: #ffffff !important; padding: 6px 12px !important; }
     </style>';
 }
 
-// 2. AJAX Handler for Quick Lead Assignment
+// 5. AJAX Handler for Quick Lead Assignment
 add_action('wp_ajax_br_assign_lead_agent', 'br_assign_lead_agent_callback');
 function br_assign_lead_agent_callback() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) {
@@ -109,7 +95,7 @@ function br_assign_lead_agent_callback() {
     }
 }
 
-// 3. Unified CSV Export Handler
+// 6. Unified CSV Export Handler
 add_action('template_redirect', 'handle_blackrock_crm_export', 1);
 function handle_blackrock_crm_export() {
     $action = isset($_GET['action']) ? $_GET['action'] : '';
@@ -203,7 +189,7 @@ function handle_blackrock_crm_export() {
     }
 }
 
-// 4. Render Master CRM Board inside Houzez Dashboard
+// 7. Master CRM Board
 function render_master_crm_board($type) {
     global $wpdb;
     $export_url = add_query_arg(['action' => 'export_blackrock_'.$type], home_url('/'));
@@ -222,7 +208,6 @@ function render_master_crm_board($type) {
                     <h2 class="title">Master <?php echo ucfirst($type); ?> Board</h2>
                 </div>
                 <div class="float-right">
-                    <a href="<?php echo esc_url(home_url('/my-properties/')); ?>" class="btn btn-primary" style="margin-right: 10px;">Back To Dashboard</a>
                     <a href="<?php echo esc_url($export_url); ?>" class="btn btn-success">Export CSV</a>
                 </div>
             </div>
@@ -284,7 +269,7 @@ function render_master_crm_board($type) {
                         $query = "SELECT e.*, l.first_name, l.last_name, l.email as lead_email, l.mobile as lead_mobile, p.post_title
                                   FROM {$wpdb->prefix}houzez_crm_enquiries e
                                   LEFT JOIN {$wpdb->prefix}houzez_crm_leads l ON e.lead_id = l.lead_id
-                                  LEFT JOIN {$wpdb->prefix}posts p ON e.listing_id = p.ID
+                                  LEFT JOIN {$wpdb->posts} p ON e.listing_id = p.ID
                                   ORDER BY e.enquiry_id DESC";
                         $data = $wpdb->get_results($query);
                     ?>
@@ -387,10 +372,7 @@ function render_master_crm_board($type) {
                 formData.append('lead_id', leadId);
                 formData.append('agent_id', agentId);
 
-                fetch(ajaxurl, {
-                    method: 'POST',
-                    body: formData
-                })
+                fetch(ajaxurl, { method: 'POST', body: formData })
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
                     if (data.success) {
@@ -400,9 +382,7 @@ function render_master_crm_board($type) {
                         alert('Error updating agent assignment');
                     }
                 })
-                .catch(function() {
-                    selectElem.style.borderColor = '#dc3545';
-                });
+                .catch(function() { selectElem.style.borderColor = '#dc3545'; });
             });
         });
     });
@@ -410,7 +390,7 @@ function render_master_crm_board($type) {
     <?php return ob_get_clean();
 }
 
-// 5. Register Shortcode
+// 8. Register Shortcode
 add_shortcode('blackrock_crm_board', 'render_blackrock_crm_shortcode');
 function render_blackrock_crm_shortcode($atts) {
     $type = isset($_GET['crm_type']) ? sanitize_text_field($_GET['crm_type']) : 'leads';
@@ -418,7 +398,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 6. Inject Sidebar Links dynamically with corrected target URLs
+// 9. Inject Sidebar Links
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
@@ -426,7 +406,7 @@ function inject_blackrock_crm_links() {
     <script>
     (function() {
         function addLinks() {
-            var headers = document.querySelectorAll('h5');
+            var headers = document.querySelectorAll('h5, .sidebar-heading');
             var crmList = null;
             for (var i = 0; i < headers.length; i++) {
                 if (headers[i].textContent.trim() === 'CRM') {
@@ -435,31 +415,20 @@ function inject_blackrock_crm_links() {
                 }
             }
             if (crmList && crmList.tagName === 'UL' && !document.getElementById('br-master-leads')) {
-                var dealsLink = crmList.querySelector('a[href*="deals"] i, a[href*="deal"] i');
-                var leadsLink = crmList.querySelector('a[href*="leads"] i, a[href*="lead"] i');
-                var inqLink   = crmList.querySelector('a[href*="inquiries"] i, a[href*="enquiries"] i');
-
-                var dealsIcon = dealsLink ? dealsLink.className : 'houzez-icon icon-briefcase';
-                var leadsIcon = leadsLink ? leadsLink.className : 'houzez-icon icon-single-neutral';
-                var inqIcon   = inqLink   ? inqLink.className   : 'houzez-icon icon-messages-bubble';
-
                 var crmItems = [
-                    { type: 'leads', label: 'All Leads', icon: leadsIcon },
-                    { type: 'deals', label: 'All Deals', icon: dealsIcon },
-                    { type: 'inquiries', label: 'All Inquiries', icon: inqIcon }
+                    { id: 'br-master-leads', url: '/master-crm/?crm_type=leads', label: 'All Leads', icon: 'houzez-icon icon-single-neutral' },
+                    { id: 'br-master-deals', url: '/master-crm/?crm_type=deals', label: 'All Deals', icon: 'houzez-icon icon-briefcase' },
+                    { id: 'br-master-inquiries', url: '/master-crm/?crm_type=inquiries', label: 'All Inquiries', icon: 'houzez-icon icon-messages-bubble' },
+                    { id: 'br-master-validator', url: '/bayut-audit-portal/', label: 'Feed Validator', icon: 'houzez-icon icon-check-circle-1' }
                 ];
 
                 crmItems.forEach(function(item) {
                     var li = document.createElement('li');
-                    li.id = 'br-master-' + item.type;
-                    li.innerHTML = '<a href="/master-crm/?crm_type=' + item.type + '"><i class="' + item.icon + ' mr-2"></i> ' + item.label + '</a>';
+                    li.id = item.id;
+                    li.className = 'nav-item';
+                    li.innerHTML = '<a class="nav-link" href="' + item.url + '"><i class="' + item.icon + ' mr-2"></i> <span>' + item.label + '</span></a>';
                     crmList.appendChild(li);
                 });
-
-                var valLi = document.createElement('li');
-                valLi.id = 'br-master-validator';
-                valLi.innerHTML = '<a href="/bayut-audit-portal/"><i class="houzez-icon icon-check-circle-1 mr-2"></i> Feed Validator</a>';
-                crmList.appendChild(valLi);
             }
         }
         setInterval(addLinks, 1000);
