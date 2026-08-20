@@ -3,7 +3,7 @@
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Baseline master CRM plugin (Reverted to stable shortcode mode).
  * Author: Black Rock Real Estate
- * Version: 4.9.0
+ * Version: 4.9.3
  */
 
 if (!defined('ABSPATH')) exit;
