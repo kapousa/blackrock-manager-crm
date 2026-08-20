@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Black Rock - CRM Manager Override
  * Description: Master CRM pipelines with Dashboard navigation, detailed table views, custom styling, and quick agent assignment.
- * Author:  Black Rock Real Estate
- * Version: 4.6.0
+ * Author: Black Rock Real Estate
+ * Version: 4.7.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -19,73 +19,64 @@ $myUpdateChecker = PucFactory::buildUpdateChecker(
 );
 $myUpdateChecker->setBranch('master');
 
-// 1. Inject Custom CSS for Full Width & Clean Table Styling
+// 1. Inject Custom CSS for Dashboard Table Views
 add_action('wp_head', 'blackrock_crm_custom_styles');
 function blackrock_crm_custom_styles() {
-    if (is_page('master-crm') || (isset($_GET['crm_type']))) {
-        echo '<style>
-            .user-dashboard-right, .dashboard-content-area, .dashboard-area {
-                width: 100% !important;
-                max-width: 100% !important;
-                float: none !important;
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-            }
-            .table-responsive {
-                width: 100% !important;
-                overflow-x: auto;
-            }
-            .table {
-                width: 100% !important;
-                margin-bottom: 1rem;
-                color: #212529;
-                border-collapse: collapse;
-            }
-            .table thead th {
-                background-color: #2c3e50 !important;
-                color: #ffffff !important;
-                border-color: #34495e !important;
-                padding: 12px 15px !important;
-                font-weight: 600 !important;
-                font-size: 14px !important;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .table tbody td {
-                padding: 12px 15px !important;
-                vertical-align: middle !important;
-                border-top: 1px solid #dee2e6 !important;
-            }
-            .badge-info {
-                background-color: #17a2b8 !important;
-                color: #ffffff !important;
-                padding: 6px 12px !important;
-                font-size: 12px !important;
-                border-radius: 4px !important;
-                display: inline-block !important;
-            }
-            .badge-secondary {
-                background-color: #6c757d !important;
-                color: #ffffff !important;
-                padding: 6px 12px !important;
-            }
-            .badge-primary {
-                background-color: #007bff !important;
-                color: #ffffff !important;
-                padding: 6px 12px !important;
-            }
-            .badge-warning {
-                background-color: #ffc107 !important;
-                color: #212529 !important;
-                padding: 6px 12px !important;
-            }
-            .badge-success {
-                background-color: #28a745 !important;
-                color: #ffffff !important;
-                padding: 6px 12px !important;
-            }
-        </style>';
-    }
+    echo '<style>
+        .table-responsive {
+            width: 100% !important;
+            overflow-x: auto;
+        }
+        .table {
+            width: 100% !important;
+            margin-bottom: 1rem;
+            color: #212529;
+            border-collapse: collapse;
+        }
+        .table thead th {
+            background-color: #2c3e50 !important;
+            color: #ffffff !important;
+            border-color: #34495e !important;
+            padding: 12px 15px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .table tbody td {
+            padding: 12px 15px !important;
+            vertical-align: middle !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+        .badge-info {
+            background-color: #17a2b8 !important;
+            color: #ffffff !important;
+            padding: 6px 12px !important;
+            font-size: 12px !important;
+            border-radius: 4px !important;
+            display: inline-block !important;
+        }
+        .badge-secondary {
+            background-color: #6c757d !important;
+            color: #ffffff !important;
+            padding: 6px 12px !important;
+        }
+        .badge-primary {
+            background-color: #007bff !important;
+            color: #ffffff !important;
+            padding: 6px 12px !important;
+        }
+        .badge-warning {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+            padding: 6px 12px !important;
+        }
+        .badge-success {
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+            padding: 6px 12px !important;
+        }
+    </style>';
 }
 
 // 2. AJAX Handler for Quick Lead Assignment
@@ -120,7 +111,6 @@ function br_assign_lead_agent_callback() {
 
 // 3. Unified CSV Export Handler
 add_action('template_redirect', 'handle_blackrock_crm_export', 1);
-
 function handle_blackrock_crm_export() {
     $action = isset($_GET['action']) ? $_GET['action'] : '';
     if (strpos($action, 'export_blackrock_') === 0) {
@@ -213,7 +203,7 @@ function handle_blackrock_crm_export() {
     }
 }
 
-// 4. Render Master CRM Board with Agent Dropdown Selector
+// 4. Render Master CRM Board inside Houzez Dashboard
 function render_master_crm_board($type) {
     global $wpdb;
     $export_url = add_query_arg(['action' => 'export_blackrock_'.$type], home_url('/'));
@@ -225,158 +215,156 @@ function render_master_crm_board($type) {
     ));
 
     ob_start(); ?>
-    <div class="user-dashboard-right">
-        <div class="dashboard-content-area">
-            <div class="dashboard-area">
-                <div class="dashboard-header clearfix" style="margin-bottom: 30px;">
-                    <div class="float-left">
-                        <h2 class="title">Master <?php echo ucfirst($type); ?> Board</h2>
-                    </div>
-                    <div class="float-right">
-                        <a href="/user-dashboard-2/" class="btn btn-primary" style="margin-right: 10px;">Back To Dashboard</a>
-                        <a href="<?php echo esc_url($export_url); ?>" class="btn btn-success">Export CSV</a>
-                    </div>
+    <div class="dashboard-content-area">
+        <div class="dashboard-area">
+            <div class="dashboard-header clearfix" style="margin-bottom: 30px;">
+                <div class="float-left">
+                    <h2 class="title">Master <?php echo ucfirst($type); ?> Board</h2>
                 </div>
-
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <?php if ($type === 'leads'):
-                            $query = "SELECT l.*, u.display_name as agent_name
-                                      FROM {$wpdb->prefix}houzez_crm_leads l
-                                      LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID
-                                      ORDER BY l.lead_id DESC";
-                            $data = $wpdb->get_results($query);
-                        ?>
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Contact Info</th>
-                                    <th>Lead Type</th>
-                                    <th>Source</th>
-                                    <th>Status</th>
-                                    <th>Assigned Agent</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($data)) : foreach ($data as $item):
-                                    $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
-                                    if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
-                                    $assigned_user_id = intval($item->user_id ?? 0);
-                                    $lead_type = !empty($item->type) ? ucfirst($item->type) : 'General';
-                                ?>
-                                <tr>
-                                    <td><strong><?php echo esc_html($name); ?></strong></td>
-                                    <td>
-                                        <?php echo esc_html($item->email ?? 'N/A'); ?><br>
-                                        <small class="text-muted"><?php echo esc_html($item->mobile ?? 'N/A'); ?></small>
-                                    </td>
-                                    <td><span class="badge badge-info"><?php echo esc_html($lead_type); ?></span></td>
-                                    <td><?php echo esc_html($item->source ?? ($item->source_link ?? 'Direct')); ?></td>
-                                    <td><span class="badge badge-secondary"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
-                                    <td>
-                                        <select class="form-control br-agent-assign-select" data-lead-id="<?php echo esc_attr($item->lead_id); ?>" style="min-width: 150px; font-size: 13px;">
-                                            <option value="0" <?php selected($assigned_user_id, 0); ?>>-- Unassigned --</option>
-                                            <?php foreach ($agents as $agent): ?>
-                                                <option value="<?php echo esc_attr($agent->ID); ?>" <?php selected($assigned_user_id, $agent->ID); ?>>
-                                                    <?php echo esc_html($agent->display_name); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </td>
-                                    <td><?php echo esc_html($item->time ?? 'N/A'); ?></td>
-                                </tr>
-                                <?php endforeach; else : ?>
-                                <tr><td colspan="7">No leads found.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-
-                        <?php elseif ($type === 'inquiries'):
-                            $query = "SELECT e.*, l.first_name, l.last_name, l.email as lead_email, l.mobile as lead_mobile, p.post_title
-                                      FROM {$wpdb->prefix}houzez_crm_enquiries e
-                                      LEFT JOIN {$wpdb->prefix}houzez_crm_leads l ON e.lead_id = l.lead_id
-                                      LEFT JOIN {$wpdb->prefix}posts p ON e.listing_id = p.ID
-                                      ORDER BY e.enquiry_id DESC";
-                            $data = $wpdb->get_results($query);
-                        ?>
-                            <thead>
-                                <tr>
-                                    <th>Contact Name</th>
-                                    <th>Inquiry Type</th>
-                                    <th>Property Listing</th>
-                                    <th>Price / Budget</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($data)) : foreach ($data as $item):
-                                    $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
-                                    if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
-                                    $email = $item->lead_email ?? ($item->email ?? 'N/A');
-                                    $phone = $item->lead_mobile ?? ($item->mobile ?? 'N/A');
-                                    $price_display = $item->price ?? ($item->min_price ? $item->min_price . ' - ' . $item->max_price : 'N/A');
-                                ?>
-                                <tr>
-                                    <td>
-                                        <strong><?php echo esc_html($name); ?></strong><br>
-                                        <small class="text-muted"><?php echo esc_html($email); ?> | <?php echo esc_html($phone); ?></small>
-                                    </td>
-                                    <td><span class="badge badge-primary"><?php echo esc_html(ucfirst($item->enquiry_type ?? ($item->inquiry_type ?? 'General'))); ?></span></td>
-                                    <td><strong><?php echo esc_html($item->post_title ?? 'General Inquiry'); ?></strong></td>
-                                    <td><?php echo esc_html($price_display); ?></td>
-                                    <td><span class="badge badge-warning"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
-                                    <td><?php echo esc_html($item->time ?? 'N/A'); ?></td>
-                                </tr>
-                                <?php endforeach; else : ?>
-                                <tr><td colspan="6">No inquiries found.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-
-                        <?php elseif ($type === 'deals'):
-                            $query = "SELECT d.*, l.first_name, l.last_name, l.mobile as lead_mobile, p.post_title
-                                      FROM {$wpdb->prefix}houzez_crm_deals d
-                                      LEFT JOIN {$wpdb->prefix}houzez_crm_leads l ON d.lead_id = l.lead_id
-                                      LEFT JOIN {$wpdb->prefix}posts p ON d.listing_id = p.ID
-                                      ORDER BY d.deal_id DESC";
-                            $data = $wpdb->get_results($query);
-                        ?>
-                            <thead>
-                                <tr>
-                                    <th>Deal Title</th>
-                                    <th>Contact Name</th>
-                                    <th>Property Listing</th>
-                                    <th>Deal Value</th>
-                                    <th>Status</th>
-                                    <th>Next Action</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($data)) : foreach ($data as $item):
-                                    $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
-                                    if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
-                                    $phone = $item->lead_mobile ?? ($item->mobile ?? 'N/A');
-                                ?>
-                                <tr>
-                                    <td><strong><?php echo esc_html($item->title ?? 'N/A'); ?></strong></td>
-                                    <td>
-                                        <?php echo esc_html($name); ?><br>
-                                        <small class="text-muted"><?php echo esc_html($phone); ?></small>
-                                    </td>
-                                    <td><?php echo esc_html($item->post_title ?? 'N/A'); ?></td>
-                                    <td><strong><?php echo esc_html($item->deal_value ?? '0'); ?></strong></td>
-                                    <td><span class="badge badge-success"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
-                                    <td><?php echo esc_html($item->next_action ?? '-'); ?></td>
-                                    <td><?php echo esc_html($item->time ?? 'N/A'); ?></td>
-                                </tr>
-                                <?php endforeach; else : ?>
-                                <tr><td colspan="7">No deals found.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        <?php endif; ?>
-                    </table>
+                <div class="float-right">
+                    <a href="<?php echo esc_url(home_url('/my-properties/')); ?>" class="btn btn-primary" style="margin-right: 10px;">Back To Dashboard</a>
+                    <a href="<?php echo esc_url($export_url); ?>" class="btn btn-success">Export CSV</a>
                 </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <?php if ($type === 'leads'):
+                        $query = "SELECT l.*, u.display_name as agent_name
+                                  FROM {$wpdb->prefix}houzez_crm_leads l
+                                  LEFT JOIN {$wpdb->users} u ON l.user_id = u.ID
+                                  ORDER BY l.lead_id DESC";
+                        $data = $wpdb->get_results($query);
+                    ?>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Contact Info</th>
+                                <th>Lead Type</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Assigned Agent</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($data)) : foreach ($data as $item):
+                                $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
+                                if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
+                                $assigned_user_id = intval($item->user_id ?? 0);
+                                $lead_type = !empty($item->type) ? ucfirst($item->type) : 'General';
+                            ?>
+                            <tr>
+                                <td><strong><?php echo esc_html($name); ?></strong></td>
+                                <td>
+                                    <?php echo esc_html($item->email ?? 'N/A'); ?><br>
+                                    <small class="text-muted"><?php echo esc_html($item->mobile ?? 'N/A'); ?></small>
+                                </td>
+                                <td><span class="badge badge-info"><?php echo esc_html($lead_type); ?></span></td>
+                                <td><?php echo esc_html($item->source ?? ($item->source_link ?? 'Direct')); ?></td>
+                                <td><span class="badge badge-secondary"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
+                                <td>
+                                    <select class="form-control br-agent-assign-select" data-lead-id="<?php echo esc_attr($item->lead_id); ?>" style="min-width: 150px; font-size: 13px;">
+                                        <option value="0" <?php selected($assigned_user_id, 0); ?>>-- Unassigned --</option>
+                                        <?php foreach ($agents as $agent): ?>
+                                            <option value="<?php echo esc_attr($agent->ID); ?>" <?php selected($assigned_user_id, $agent->ID); ?>>
+                                                <?php echo esc_html($agent->display_name); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                                <td><?php echo esc_html($item->time ?? 'N/A'); ?></td>
+                            </tr>
+                            <?php endforeach; else : ?>
+                            <tr><td colspan="7">No leads found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+
+                    <?php elseif ($type === 'inquiries'):
+                        $query = "SELECT e.*, l.first_name, l.last_name, l.email as lead_email, l.mobile as lead_mobile, p.post_title
+                                  FROM {$wpdb->prefix}houzez_crm_enquiries e
+                                  LEFT JOIN {$wpdb->prefix}houzez_crm_leads l ON e.lead_id = l.lead_id
+                                  LEFT JOIN {$wpdb->prefix}posts p ON e.listing_id = p.ID
+                                  ORDER BY e.enquiry_id DESC";
+                        $data = $wpdb->get_results($query);
+                    ?>
+                        <thead>
+                            <tr>
+                                <th>Contact Name</th>
+                                <th>Inquiry Type</th>
+                                <th>Property Listing</th>
+                                <th>Price / Budget</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($data)) : foreach ($data as $item):
+                                $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
+                                if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
+                                $email = $item->lead_email ?? ($item->email ?? 'N/A');
+                                $phone = $item->lead_mobile ?? ($item->mobile ?? 'N/A');
+                                $price_display = $item->price ?? ($item->min_price ? $item->min_price . ' - ' . $item->max_price : 'N/A');
+                            ?>
+                            <tr>
+                                <td>
+                                    <strong><?php echo esc_html($name); ?></strong><br>
+                                    <small class="text-muted"><?php echo esc_html($email); ?> | <?php echo esc_html($phone); ?></small>
+                                </td>
+                                <td><span class="badge badge-primary"><?php echo esc_html(ucfirst($item->enquiry_type ?? ($item->inquiry_type ?? 'General'))); ?></span></td>
+                                <td><strong><?php echo esc_html($item->post_title ?? 'General Inquiry'); ?></strong></td>
+                                <td><?php echo esc_html($price_display); ?></td>
+                                <td><span class="badge badge-warning"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
+                                <td><?php echo esc_html($item->time ?? 'N/A'); ?></td>
+                            </tr>
+                            <?php endforeach; else : ?>
+                            <tr><td colspan="6">No inquiries found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+
+                    <?php elseif ($type === 'deals'):
+                        $query = "SELECT d.*, l.first_name, l.last_name, l.mobile as lead_mobile, p.post_title
+                                  FROM {$wpdb->prefix}houzez_crm_deals d
+                                  LEFT JOIN {$wpdb->prefix}houzez_crm_leads l ON d.lead_id = l.lead_id
+                                  LEFT JOIN {$wpdb->posts} p ON d.listing_id = p.ID
+                                  ORDER BY d.deal_id DESC";
+                        $data = $wpdb->get_results($query);
+                    ?>
+                        <thead>
+                            <tr>
+                                <th>Deal Title</th>
+                                <th>Contact Name</th>
+                                <th>Property Listing</th>
+                                <th>Deal Value</th>
+                                <th>Status</th>
+                                <th>Next Action</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($data)) : foreach ($data as $item):
+                                $name = trim(($item->first_name ?? '') . ' ' . ($item->last_name ?? ''));
+                                if (empty($name)) { $name = $item->display_name ?? 'N/A'; }
+                                $phone = $item->lead_mobile ?? ($item->mobile ?? 'N/A');
+                            ?>
+                            <tr>
+                                <td><strong><?php echo esc_html($item->title ?? 'N/A'); ?></strong></td>
+                                <td>
+                                    <?php echo esc_html($name); ?><br>
+                                    <small class="text-muted"><?php echo esc_html($phone); ?></small>
+                                </td>
+                                <td><?php echo esc_html($item->post_title ?? 'N/A'); ?></td>
+                                <td><strong><?php echo esc_html($item->deal_value ?? '0'); ?></strong></td>
+                                <td><span class="badge badge-success"><?php echo esc_html(ucfirst($item->status ?? 'New')); ?></span></td>
+                                <td><?php echo esc_html($item->next_action ?? '-'); ?></td>
+                                <td><?php echo esc_html($item->time ?? 'N/A'); ?></td>
+                            </tr>
+                            <?php endforeach; else : ?>
+                            <tr><td colspan="7">No deals found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    <?php endif; ?>
+                </table>
             </div>
         </div>
     </div>
@@ -430,7 +418,7 @@ function render_blackrock_crm_shortcode($atts) {
     return render_master_crm_board($type);
 }
 
-// 6. Inject Sidebar Links dynamically copying Houzez menu icons
+// 6. Inject Sidebar Links dynamically with corrected target URLs
 add_action('wp_footer', 'inject_blackrock_crm_links', 9999);
 function inject_blackrock_crm_links() {
     if (!current_user_can('manage_options') && !current_user_can('houzez_manager')) return;
